@@ -27,8 +27,8 @@ window.addRow = function(enemySkill = '', buffs = [], memo = '', status = 'none'
     tr.id = rowId;
     tr.draggable = true;
     
-    // クリックで行を選択（input以外をクリックした時）
-    tr.addEventListener('click', (e) => {
+    // クリックで行を選択
+    tr.addEventListener('click', () => {
         selectRow(rowId);
     });
 
@@ -49,10 +49,9 @@ window.addRow = function(enemySkill = '', buffs = [], memo = '', status = 'none'
     tbody.appendChild(tr);
     const container = tr.querySelector('.buff-container');
     if (buffs && buffs.length > 0) {
-        buffs.forEach(fileUrl => addIconElement(container, fileUrl));
+        buffs.forEach(fileUrl => addIconElement(container, fileUrl, rowId));
     }
     
-    // 追加した行を自動選択
     selectRow(rowId);
 }
 
@@ -75,6 +74,7 @@ window.toggleRowStatus = function(id, type) {
         tr.classList.add('is-caution');
         circBtn.innerText = '🔴';
     }
+    selectRow(id); // マーク変更時も選択状態にする
 }
 
 function setupJobPalette() {
@@ -128,22 +128,23 @@ function selectRow(id) {
 
 function addIconToCurrentRow(fileUrl) {
     if (!currentRowId) {
-        // 行がない場合は1行目を作成して追加
         window.addRow();
     }
     const container = document.querySelector(`#${currentRowId} .buff-container`);
     if (container) {
-        addIconElement(container, fileUrl);
+        addIconElement(container, fileUrl, currentRowId);
     }
 }
 
-function addIconElement(container, fileUrl) {
+function addIconElement(container, fileUrl, rowId) {
     const img = document.createElement('img');
     img.src = fileUrl;
     img.dataset.rawSrc = fileUrl;
     img.className = "buff-icon";
     img.onclick = (e) => { 
         e.stopPropagation(); 
+        // 削除する際、その行を改めて選択状態にする
+        selectRow(rowId);
         img.remove(); 
     };
     container.appendChild(img);
@@ -219,7 +220,6 @@ window.clearCurrentTable = function(isNew) {
     }
 }
 
-// 起動時の初期化
 document.addEventListener('DOMContentLoaded', () => {
     setupJobPalette();
     updateSaveList();
