@@ -1,15 +1,21 @@
-const allImages = import.meta.glob('./icons/**/*.png', { eager: true, query: '?url' });
+// eager: true を維持しつつ、パス解決を安定させます
+const allImages = import.meta.glob('./icons/**/*.png', { eager: true });
 
 const JOB_DATA = {};
 let currentRowId = null;
 
 // 画像データの読み込み
 for (const path in allImages) {
+    // Viteがビルド時に変換した後のURLを取得
+    const imageUrl = allImages[path].default || allImages[path];
+    
+    // パスからジョブ名とファイル名を取得
+    // 例: ./icons/PLD/sentinel.png -> parts: [".", "icons", "PLD", "sentinel.png"]
     const parts = path.split('/'); 
     const jobName = parts[parts.length - 2]; 
     const fileName = parts[parts.length - 1].replace('.png', '');
+    
     if (!JOB_DATA[jobName]) JOB_DATA[jobName] = [];
-    const imageUrl = allImages[path].default || allImages[path];
     JOB_DATA[jobName].push({ name: fileName, file: imageUrl });
 }
 
@@ -27,7 +33,6 @@ window.addRow = function(enemySkill = '', buffs = [], memo = '', status = 'none'
     tr.id = rowId;
     tr.draggable = true;
     
-    // クリックで行を選択
     tr.addEventListener('click', () => {
         selectRow(rowId);
     });
@@ -74,7 +79,7 @@ window.toggleRowStatus = function(id, type) {
         tr.classList.add('is-caution');
         circBtn.innerText = '🔴';
     }
-    selectRow(id); // マーク変更時も選択状態にする
+    selectRow(id);
 }
 
 function setupJobPalette() {
@@ -143,7 +148,6 @@ function addIconElement(container, fileUrl, rowId) {
     img.className = "buff-icon";
     img.onclick = (e) => { 
         e.stopPropagation(); 
-        // 削除する際、その行を改めて選択状態にする
         selectRow(rowId);
         img.remove(); 
     };
