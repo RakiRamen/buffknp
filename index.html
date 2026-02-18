@@ -2,83 +2,120 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>FF14 バフカンペ作成ツール</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .icon-btn:hover { transform: scale(1.1); filter: brightness(1.4); }
-        .buff-icon { width: 32px; height: 32px; cursor: pointer; }
-        .selected-row { background-color: #dbeafe !important; outline: 2px solid #3b82f6; z-index: 10; }
-        .is-important { background-color: #fef08a !important; }
-        .is-important input { font-weight: bold !important; color: #854d0e !important; }
-        .is-caution { background-color: #ffedd5 !important; }
-        .is-caution input { font-weight: bold !important; color: #9a3412 !important; }
-        .compact-input { height: 36px; font-size: 14px; border: none; background: transparent; transition: all 0.2s; width: 100%; }
-        .compact-input:hover, .compact-input:focus { border: 1px solid #e2e8f0 !important; background: white !important; }
-        .drag-handle { cursor: grab; color: #cbd5e1; user-select: none; width: 32px; }
-        .dragging { opacity: 0.5; background-color: #e2e8f0; }
-        .custom-scroll::-webkit-scrollbar { width: 6px; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
-        .sidebar-container { display: flex; flex-direction: column; height: calc(100vh - 16px); }
-        #jobPaletteSection { flex-grow: 1; overflow-y: auto; }
-        .job-container { margin-bottom: 4px; border-radius: 4px; border: 1px solid #334155; background: #1e293b; flex-shrink: 0; }
-        .job-header-btn { width: 100%; min-height: 44px; text-align: left; padding: 0 10px; font-size: 12px; font-weight: bold; color: #cbd5e1; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
-        .job-header-btn.active { background: #3b82f6; color: white; }
-        .job-icon-grid { display: none; grid-template-columns: repeat(3, 40px); justify-content: center; gap: 6px; padding: 8px 4px; background: #0f172a; }
-        .job-container.active .job-icon-grid { display: grid; }
-        .icon-btn { width: 40px; height: 40px; cursor: pointer; object-fit: contain; border: none; background: transparent; }
-        .mark-btn { min-width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; }
-        .copyright { font-size: 10px; color: #64748b; padding: 12px 4px; border-top: 1px solid #334155; text-align: center; flex-shrink: 0; }
-        table { table-layout: fixed; width: 100%; border-collapse: collapse; }
-        th, td { border: 1px solid #e2e8f0; }
-        .col-drag { width: 35px; }
-        .col-timeline { width: 22%; }
+        /* ベースレイアウト */
+        .main-container { height: 100vh; display: flex; flex-direction: column; }
+        @media (min-width: 768px) {
+            .main-container { flex-direction: row; }
+        }
+
+        /* サイドバー（パレット） */
+        .sidebar { 
+            width: 100%; 
+            background: #0f172a; 
+            display: flex; 
+            flex-direction: column;
+            border-bottom: 2px solid #334155;
+        }
+        @media (min-width: 768px) {
+            .sidebar { width: 200px; border-bottom: none; border-right: 2px solid #334155; }
+        }
+
+        /* アイコングリッド：スマホでは5列、PCでは3列 */
+        .job-icon-grid { 
+            display: none; 
+            grid-template-columns: repeat(5, 1fr); 
+            gap: 8px; 
+            padding: 10px; 
+            background: #1e293b;
+        }
+        @media (min-width: 768px) {
+            .job-icon-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+
+        .icon-btn { width: 100%; aspect-ratio: 1/1; cursor: pointer; object-fit: contain; }
+        .icon-btn:active { transform: scale(0.9); }
+
+        /* テーブルエリア */
+        .table-wrapper { flex-grow: 1; overflow: auto; background: white; }
+        table { min-width: 600px; width: 100%; border-collapse: collapse; table-layout: fixed; }
+        
+        /* 列幅調整 */
+        .col-drag { width: 30px; }
+        .col-timeline { width: 120px; }
         .col-buff { width: auto; }
-        .col-memo { width: 25%; }
-        .col-mark { width: 90px; }
-        .col-delete { width: 35px; }
+        .col-memo { width: 150px; }
+        .col-mark { width: 80px; }
+        .col-delete { width: 40px; }
+
+        .compact-input { width: 100%; height: 40px; padding: 0 8px; font-size: 14px; border: none; outline: none; }
+        .buff-icon { width: 32px; height: 32px; flex-shrink: 0; }
+
+        .selected-row { background-color: #eff6ff !important; box-shadow: inset 4px 0 0 #3b82f6; }
+        .is-important { background-color: #fefce8 !important; }
+        .is-caution { background-color: #fff7ed !important; }
+
+        /* ジョブコンテナ */
+        .job-container { border-bottom: 1px solid #334155; }
+        .job-header-btn { 
+            width: 100%; padding: 12px; text-align: left; color: #cbd5e1; 
+            font-weight: bold; font-size: 13px; display: flex; justify-content: space-between;
+        }
+        .job-container.active .job-icon-grid { display: grid; }
+        .job-header-btn.active { background: #3b82f6; color: white; }
     </style>
 </head>
-<body class="bg-slate-100 p-2 text-slate-900 overflow-hidden">
-    <div class="flex gap-4 h-screen">
-        <aside class="w-48 bg-slate-900 rounded-lg shadow-2xl sidebar-container p-2 flex-shrink-0">
-            <div id="jobPaletteSection" class="custom-scroll pr-1 mt-2"></div>
-            <div class="copyright">© SQUARE ENIX</div>
-        </aside>
-        <main class="flex-grow flex flex-col overflow-hidden">
-            <div class="bg-white shadow-xl rounded-sm flex flex-col h-full overflow-hidden">
-                <div class="flex items-center justify-between p-2 border-b bg-slate-50 flex-wrap gap-2">
-                    <div class="flex items-center gap-2">
-                        <span class="font-black text-slate-700 text-sm">FF14 バフカンペ作成ツール</span>
-                        <input id="bossName" type="text" class="border px-2 py-1 w-48 text-xs font-bold border-blue-200 outline-none" placeholder="コンテンツ名...">
-                        <button onclick="saveData()" class="bg-emerald-600 text-white px-3 py-1 rounded text-xs font-bold hover:bg-emerald-700 shadow-sm">💾 保存</button>
-                    </div>
-                    <div class="flex items-center gap-1 bg-slate-200 p-1 rounded">
-                        <select id="saveList" class="border text-xs p-1 rounded min-w-[120px] outline-none"></select>
-                        <button onclick="loadData()" class="bg-blue-600 text-white px-3 py-1 rounded text-xs font-bold">📂 読込</button>
-                        <button onclick="deleteData()" class="bg-white text-red-600 border border-red-200 px-2 py-1 rounded text-xs font-bold hover:bg-red-50">🗑️ 削除</button>
-                        <button onclick="clearCurrentTable(true)" class="bg-emerald-600 text-white px-2 py-1 rounded text-xs font-bold hover:bg-emerald-700 shadow-sm">🆕 新規</button>
-                    </div>
-                </div>
-                <div class="flex-grow overflow-auto custom-scroll">
-                    <table>
-                        <thead class="sticky top-0 z-20">
-                            <tr class="bg-slate-800 text-white text-[11px] font-bold tracking-wider">
-                                <th class="col-drag p-2"></th>
-                                <th class="col-timeline p-2 text-center">タイムライン</th>
-                                <th class="col-buff p-2 text-center">バフ／軽減</th>
-                                <th class="col-memo p-2 text-center">メモ</th>
-                                <th class="col-mark p-2 text-center">ハイライト</th>
-                                <th class="col-delete p-2"></th>
-                            </tr>
-                        </thead>
-                        <tbody id="tableBody"></tbody>
-                    </table>
-                </div>
-                <button onclick="addRow()" class="w-full py-3 bg-slate-50 text-slate-500 hover:bg-slate-100 text-xs font-bold border-t">＋ 行を追加</button>
+<body class="bg-slate-900 overflow-hidden">
+
+    <div class="main-container">
+        <aside class="sidebar">
+            <div class="p-2 text-white text-xs font-bold border-b border-slate-700 flex justify-between items-center">
+                <span>JOB PALETTE</span>
+                <span class="md:hidden text-[10px] opacity-50">タップで展開</span>
             </div>
+            <div id="jobPaletteSection" class="overflow-y-auto flex-grow custom-scroll" style="max-height: 40vh; md:max-height: none;">
+                </div>
+            <div class="hidden md:block text-[10px] color-[#64748b] p-2 text-center border-t border-slate-800 text-slate-500">
+                © SQUARE ENIX
+            </div>
+        </aside>
+
+        <main class="flex-grow flex flex-col bg-white overflow-hidden">
+            <div class="p-2 border-b bg-slate-50 flex flex-wrap gap-2 items-center">
+                <input id="bossName" type="text" class="border px-2 py-1 text-sm rounded w-full md:w-40" placeholder="コンテンツ名">
+                <div class="flex gap-1 flex-wrap">
+                    <button onclick="saveData()" class="bg-emerald-600 text-white px-3 py-1.5 rounded text-xs font-bold">保存</button>
+                    <select id="saveList" class="border text-xs p-1 rounded max-w-[100px]"></select>
+                    <button onclick="loadData()" class="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-bold">読込</button>
+                    <button onclick="clearCurrentTable(true)" class="bg-slate-500 text-white px-3 py-1.5 rounded text-xs font-bold">新規</button>
+                </div>
+            </div>
+
+            <div class="table-wrapper custom-scroll">
+                <table>
+                    <thead class="sticky top-0 z-20 bg-slate-800 text-white text-[11px]">
+                        <tr>
+                            <th class="col-drag"></th>
+                            <th class="col-timeline p-2">タイムライン</th>
+                            <th class="col-buff p-2">バフ／軽減</th>
+                            <th class="col-memo p-2">メモ</th>
+                            <th class="col-mark p-2">印</th>
+                            <th class="col-delete"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+
+            <button onclick="addRow()" class="w-full py-4 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-sm border-t active:bg-slate-300">
+                ＋ 行を追加する
+            </button>
         </main>
     </div>
+
     <script type="module" src="./main.js"></script>
 </body>
 </html>
