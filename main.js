@@ -1,16 +1,14 @@
-// eager: true を維持しつつ、パス解決を安定させます
-const allImages = import.meta.glob('./icons/**/*.png', { eager: true });
+// 画像を一括取得。'as: "url"' を指定することで、ビルド後も正しいURLとして扱えます。
+const allImages = import.meta.glob('./icons/**/*.png', { eager: true, as: 'url' });
 
 const JOB_DATA = {};
 let currentRowId = null;
 
-// 画像データの読み込み
+// 画像データの読み込みとジョブごとの整理
 for (const path in allImages) {
-    // Viteがビルド時に変換した後のURLを取得
-    const imageUrl = allImages[path].default || allImages[path];
+    const imageUrl = allImages[path];
     
-    // パスからジョブ名とファイル名を取得
-    // 例: ./icons/PLD/sentinel.png -> parts: [".", "icons", "PLD", "sentinel.png"]
+    // パスからジョブ名とファイル名を抽出
     const parts = path.split('/'); 
     const jobName = parts[parts.length - 2]; 
     const fileName = parts[parts.length - 1].replace('.png', '');
@@ -19,7 +17,7 @@ for (const path in allImages) {
     JOB_DATA[jobName].push({ name: fileName, file: imageUrl });
 }
 
-// 行の追加
+// 行の追加関数
 window.addRow = function(enemySkill = '', buffs = [], memo = '', status = 'none') {
     const tbody = document.getElementById('tableBody');
     const rowId = 'row-' + Date.now() + Math.random().toString(36).substr(2, 5);
@@ -60,33 +58,13 @@ window.addRow = function(enemySkill = '', buffs = [], memo = '', status = 'none'
     selectRow(rowId);
 }
 
-window.toggleRowStatus = function(id, type) {
-    const tr = document.getElementById(id);
-    if (!tr) return;
-    const starBtn = tr.querySelector('.btn-star');
-    const circBtn = tr.querySelector('.btn-circle');
-    const isImportant = tr.classList.contains('is-important');
-    const isCaution = tr.classList.contains('is-caution');
-
-    tr.classList.remove('is-important', 'is-caution');
-    starBtn.innerText = '☆';
-    circBtn.innerText = '⚪';
-
-    if (type === 'important' && !isImportant) {
-        tr.classList.add('is-important');
-        starBtn.innerText = '⭐';
-    } else if (type === 'caution' && !isCaution) {
-        tr.classList.add('is-caution');
-        circBtn.innerText = '🔴';
-    }
-    selectRow(id);
-}
-
+// ジョブパレットの生成
 function setupJobPalette() {
     const section = document.getElementById('jobPaletteSection');
     if (!section) return;
     section.innerHTML = '';
     
+    // ジョブ名でソートして表示
     Object.keys(JOB_DATA).sort().forEach(jobKey => {
         const container = document.createElement('div');
         container.className = 'job-container';
@@ -152,6 +130,28 @@ function addIconElement(container, fileUrl, rowId) {
         img.remove(); 
     };
     container.appendChild(img);
+}
+
+window.toggleRowStatus = function(id, type) {
+    const tr = document.getElementById(id);
+    if (!tr) return;
+    const starBtn = tr.querySelector('.btn-star');
+    const circBtn = tr.querySelector('.btn-circle');
+    const isImportant = tr.classList.contains('is-important');
+    const isCaution = tr.classList.contains('is-caution');
+
+    tr.classList.remove('is-important', 'is-caution');
+    starBtn.innerText = '☆';
+    circBtn.innerText = '⚪';
+
+    if (type === 'important' && !isImportant) {
+        tr.classList.add('is-important');
+        starBtn.innerText = '⭐';
+    } else if (type === 'caution' && !isCaution) {
+        tr.classList.add('is-caution');
+        circBtn.innerText = '🔴';
+    }
+    selectRow(id);
 }
 
 window.saveData = function() {
