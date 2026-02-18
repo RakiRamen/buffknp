@@ -1,23 +1,17 @@
-// 画像を一括取得。'as: "url"' を指定することで、ビルド後も正しいURLとして扱えます。
 const allImages = import.meta.glob('./icons/**/*.png', { eager: true, as: 'url' });
 
 const JOB_DATA = {};
 let currentRowId = null;
 
-// 画像データの読み込みとジョブごとの整理
 for (const path in allImages) {
     const imageUrl = allImages[path];
-    
-    // パスからジョブ名とファイル名を抽出
     const parts = path.split('/'); 
     const jobName = parts[parts.length - 2]; 
     const fileName = parts[parts.length - 1].replace('.png', '');
-    
     if (!JOB_DATA[jobName]) JOB_DATA[jobName] = [];
     JOB_DATA[jobName].push({ name: fileName, file: imageUrl });
 }
 
-// 行の追加関数
 window.addRow = function(enemySkill = '', buffs = [], memo = '', status = 'none') {
     const tbody = document.getElementById('tableBody');
     const rowId = 'row-' + Date.now() + Math.random().toString(36).substr(2, 5);
@@ -37,16 +31,18 @@ window.addRow = function(enemySkill = '', buffs = [], memo = '', status = 'none'
 
     tr.innerHTML = `
         <td class="text-center drag-handle font-bold text-slate-300 col-drag">⠿</td>
-        <td class="p-0 col-timeline"><input type="text" class="compact-input text-enemy outline-none px-2" value="${enemySkill}"></td>
-        <td class="p-0 col-buff"><div class="flex flex-wrap gap-1 buff-container min-h-[40px] items-center px-1"></div></td>
-        <td class="p-0 col-memo"><input type="text" class="compact-input text-memo outline-none px-2" value="${memo}"></td>
+        <td class="p-0 col-timeline"><input type="text" class="compact-input text-enemy outline-none" value="${enemySkill}"></td>
+        <td class="p-0 col-buff"><div class="flex flex-wrap gap-1 buff-container min-h-[44px] items-center px-1"></div></td>
+        <td class="p-0 col-memo"><input type="text" class="compact-input text-memo outline-none" value="${memo}"></td>
         <td class="p-0 col-mark">
             <div class="flex items-center justify-center gap-1 w-full h-full">
-                <button onclick="toggleRowStatus('${rowId}', 'important'); event.stopPropagation();" class="mark-btn text-lg btn-star">${status === 'important' ? '⭐' : '☆'}</button>
-                <button onclick="toggleRowStatus('${rowId}', 'caution'); event.stopPropagation();" class="mark-btn text-lg btn-circle">${status === 'caution' ? '🔴' : '⚪'}</button>
+                <button onclick="toggleRowStatus('${rowId}', 'important'); event.stopPropagation();" class="mark-btn btn-star">${status === 'important' ? '⭐' : '☆'}</button>
+                <button onclick="toggleRowStatus('${rowId}', 'caution'); event.stopPropagation();" class="mark-btn btn-circle">${status === 'caution' ? '🔴' : '〇'}</button>
             </div>
         </td>
-        <td class="text-center col-delete"><button onclick="document.getElementById('${rowId}').remove(); event.stopPropagation();" class="text-slate-300 hover:text-red-500 text-xs px-2">✕</button></td>
+        <td class="text-center col-delete">
+            <button onclick="document.getElementById('${rowId}').remove(); event.stopPropagation();" class="btn-delete-row font-bold">✕</button>
+        </td>
     `;
     
     tbody.appendChild(tr);
@@ -54,82 +50,7 @@ window.addRow = function(enemySkill = '', buffs = [], memo = '', status = 'none'
     if (buffs && buffs.length > 0) {
         buffs.forEach(fileUrl => addIconElement(container, fileUrl, rowId));
     }
-    
     selectRow(rowId);
-}
-
-// ジョブパレットの生成
-function setupJobPalette() {
-    const section = document.getElementById('jobPaletteSection');
-    if (!section) return;
-    section.innerHTML = '';
-    
-    // ジョブ名でソートして表示
-    Object.keys(JOB_DATA).sort().forEach(jobKey => {
-        const container = document.createElement('div');
-        container.className = 'job-container';
-
-        const header = document.createElement('button');
-        header.className = 'job-header-btn';
-        header.innerHTML = `<span>${jobKey}</span><span style="font-size:10px; opacity:0.4">▼</span>`;
-        header.onclick = () => {
-            const isActive = container.classList.toggle('active');
-            header.classList.toggle('active', isActive);
-        };
-
-        const grid = document.createElement('div');
-        grid.className = 'job-icon-grid';
-
-        JOB_DATA[jobKey].forEach(icon => {
-            const img = document.createElement('img');
-            img.src = icon.file;
-            img.dataset.rawSrc = icon.file;
-            img.className = "icon-btn";
-            img.title = icon.name;
-            img.onclick = (e) => { 
-                e.preventDefault();
-                e.stopPropagation(); 
-                addIconToCurrentRow(icon.file); 
-            };
-            grid.appendChild(img);
-        });
-
-        container.appendChild(header);
-        container.appendChild(grid);
-        section.appendChild(container);
-    });
-}
-
-function selectRow(id) {
-    currentRowId = id;
-    document.querySelectorAll('#tableBody tr').forEach(r => r.classList.remove('selected-row'));
-    const selected = document.getElementById(id);
-    if (selected) {
-        selected.classList.add('selected-row');
-    }
-}
-
-function addIconToCurrentRow(fileUrl) {
-    if (!currentRowId) {
-        window.addRow();
-    }
-    const container = document.querySelector(`#${currentRowId} .buff-container`);
-    if (container) {
-        addIconElement(container, fileUrl, currentRowId);
-    }
-}
-
-function addIconElement(container, fileUrl, rowId) {
-    const img = document.createElement('img');
-    img.src = fileUrl;
-    img.dataset.rawSrc = fileUrl;
-    img.className = "buff-icon";
-    img.onclick = (e) => { 
-        e.stopPropagation(); 
-        selectRow(rowId);
-        img.remove(); 
-    };
-    container.appendChild(img);
 }
 
 window.toggleRowStatus = function(id, type) {
@@ -142,7 +63,7 @@ window.toggleRowStatus = function(id, type) {
 
     tr.classList.remove('is-important', 'is-caution');
     starBtn.innerText = '☆';
-    circBtn.innerText = '⚪';
+    circBtn.innerText = '〇';
 
     if (type === 'important' && !isImportant) {
         tr.classList.add('is-important');
@@ -152,6 +73,62 @@ window.toggleRowStatus = function(id, type) {
         circBtn.innerText = '🔴';
     }
     selectRow(id);
+}
+
+function setupJobPalette() {
+    const section = document.getElementById('jobPaletteSection');
+    if (!section) return;
+    section.innerHTML = '';
+    
+    Object.keys(JOB_DATA).sort().forEach(jobKey => {
+        const container = document.createElement('div');
+        container.className = 'job-container';
+        const header = document.createElement('button');
+        header.className = 'job-header-btn';
+        header.innerHTML = `<span>${jobKey}</span><span style="font-size:10px; opacity:0.4">▼</span>`;
+        header.onclick = () => {
+            const isActive = container.classList.toggle('active');
+            header.classList.toggle('active', isActive);
+        };
+        const grid = document.createElement('div');
+        grid.className = 'job-icon-grid';
+        JOB_DATA[jobKey].forEach(icon => {
+            const img = document.createElement('img');
+            img.src = icon.file;
+            img.dataset.rawSrc = icon.file;
+            img.className = "icon-btn";
+            img.onclick = (e) => { 
+                e.preventDefault(); e.stopPropagation(); 
+                addIconToCurrentRow(icon.file); 
+            };
+            grid.appendChild(img);
+        });
+        container.appendChild(header);
+        container.appendChild(grid);
+        section.appendChild(container);
+    });
+}
+
+function selectRow(id) {
+    currentRowId = id;
+    document.querySelectorAll('#tableBody tr').forEach(r => r.classList.remove('selected-row'));
+    const selected = document.getElementById(id);
+    if (selected) selected.classList.add('selected-row');
+}
+
+function addIconToCurrentRow(fileUrl) {
+    if (!currentRowId) window.addRow();
+    const container = document.querySelector(`#${currentRowId} .buff-container`);
+    if (container) addIconElement(container, fileUrl, currentRowId);
+}
+
+function addIconElement(container, fileUrl, rowId) {
+    const img = document.createElement('img');
+    img.src = fileUrl;
+    img.dataset.rawSrc = fileUrl;
+    img.className = "buff-icon";
+    img.onclick = (e) => { e.stopPropagation(); selectRow(rowId); img.remove(); };
+    container.appendChild(img);
 }
 
 window.saveData = function() {
@@ -209,7 +186,7 @@ function initDragAndDrop() {
 
 window.deleteData = function() {
     const bossName = document.getElementById('saveList').value;
-    if (bossName && confirm('保存されているデータを削除しますか？')) {
+    if (bossName && confirm(`「${bossName}」の保存データを削除しますか？`)) {
         localStorage.removeItem(`ff14_kanpe_${bossName}`);
         updateSaveList();
         window.clearCurrentTable(true);
@@ -218,10 +195,7 @@ window.deleteData = function() {
 
 window.clearCurrentTable = function(isNew) {
     document.getElementById('tableBody').innerHTML = '';
-    if (isNew) { 
-        document.getElementById('bossName').value = ''; 
-        window.addRow(); 
-    }
+    if (isNew) { document.getElementById('bossName').value = ''; window.addRow(); }
 }
 
 document.addEventListener('DOMContentLoaded', () => {

@@ -12,85 +12,145 @@
             .main-container { flex-direction: row; }
         }
 
-        /* サイドバー（パレット） */
+        /* サイドバー */
         .sidebar { 
             width: 100%; 
             background: #0f172a; 
             display: flex; 
             flex-direction: column;
             border-bottom: 2px solid #334155;
+            flex-shrink: 0;
         }
         @media (min-width: 768px) {
-            .sidebar { width: 200px; border-bottom: none; border-right: 2px solid #334155; }
+            .sidebar { 
+                width: 220px; 
+                min-width: 220px; 
+                border-bottom: none; 
+                border-right: 2px solid #334155; 
+            }
         }
 
-        /* アイコングリッド：スマホでは5列、PCでは3列 */
+        /* ジョブパレットエリア */
+        #jobPaletteSection {
+            overflow-y: auto;
+            flex-grow: 1;
+            max-height: 35vh;
+        }
+        @media (min-width: 768px) {
+            #jobPaletteSection {
+                max-height: none;
+                padding-top: 8px;
+            }
+        }
+
+        /* アイコングリッド */
         .job-icon-grid { 
             display: none; 
-            grid-template-columns: repeat(5, 1fr); 
-            gap: 8px; 
-            padding: 10px; 
+            grid-template-columns: repeat(6, 1fr); 
+            gap: 4px; 
+            padding: 8px; 
             background: #1e293b;
         }
         @media (min-width: 768px) {
-            .job-icon-grid { grid-template-columns: repeat(3, 1fr); }
+            .job-icon-grid { 
+                grid-template-columns: repeat(4, 42px); 
+                justify-content: center;
+            }
         }
 
-        .icon-btn { width: 100%; aspect-ratio: 1/1; cursor: pointer; object-fit: contain; }
-        .icon-btn:active { transform: scale(0.9); }
-
-        /* テーブルエリア */
-        .table-wrapper { flex-grow: 1; overflow: auto; background: white; }
-        table { min-width: 600px; width: 100%; border-collapse: collapse; table-layout: fixed; }
+        .icon-btn { 
+            width: 100%; 
+            max-width: 42px;
+            aspect-ratio: 1/1; 
+            cursor: pointer; 
+            object-fit: contain; 
+            border-radius: 4px;
+            transition: transform 0.15s ease;
+        }
         
-        /* 列幅調整 */
+        @media (min-width: 768px) {
+            .icon-btn:hover {
+                transform: scale(1.15);
+                z-index: 10;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            }
+        }
+        @media (max-width: 767px) {
+            .icon-btn { max-width: 34px; }
+            .icon-btn:active { transform: scale(0.9); }
+        }
+
+        .buff-icon { 
+            width: 28px; 
+            height: 28px; 
+            flex-shrink: 0; 
+            border-radius: 2px;
+            transition: transform 0.1s;
+        }
+        @media (min-width: 768px) {
+            .buff-icon { width: 34px; height: 34px; }
+            .buff-icon:hover { transform: scale(1.15); cursor: pointer; }
+        }
+
+        /* テーブルエリア：タイムラインとメモ 400px固定 */
+        .table-wrapper { flex-grow: 1; overflow: auto; background: white; }
+        table { min-width: 1200px; width: 100%; border-collapse: collapse; table-layout: fixed; }
+        
         .col-drag { width: 30px; }
-        .col-timeline { width: 120px; }
+        .col-timeline { width: 400px; } 
         .col-buff { width: auto; }
-        .col-memo { width: 150px; }
-        .col-mark { width: 80px; }
-        .col-delete { width: 40px; }
+        .col-memo { width: 400px; }
+        .col-mark { width: 100px; }
+        .col-delete { width: 45px; }
 
-        .compact-input { width: 100%; height: 40px; padding: 0 8px; font-size: 14px; border: none; outline: none; }
-        .buff-icon { width: 32px; height: 32px; flex-shrink: 0; }
-
+        .compact-input { width: 100%; height: 40px; padding: 0 8px; font-size: 14px; border: none; outline: none; background: transparent; }
+        
+        /* 選択状態 */
         .selected-row { background-color: #eff6ff !important; box-shadow: inset 4px 0 0 #3b82f6; }
-        .is-important { background-color: #fefce8 !important; }
-        .is-caution { background-color: #fff7ed !important; }
+
+        /* ハイライト背景色：少し濃く調整 */
+        .is-important { background-color: #fef08a !important; } /* 黄色 (Tailwind yellow-200) */
+        .is-caution { background-color: #fed7aa !important; }   /* オレンジ (Tailwind orange-200) */
 
         /* ジョブコンテナ */
         .job-container { border-bottom: 1px solid #334155; }
         .job-header-btn { 
             width: 100%; padding: 12px; text-align: left; color: #cbd5e1; 
-            font-weight: bold; font-size: 13px; display: flex; justify-content: space-between;
+            font-weight: bold; font-size: 12px; display: flex; justify-content: space-between;
         }
         .job-container.active .job-icon-grid { display: grid; }
         .job-header-btn.active { background: #3b82f6; color: white; }
+
+        .mark-btn { font-size: 18px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; }
+        .btn-delete-row { color: #cbd5e1; font-size: 16px; width: 100%; height: 100%; }
+        .btn-delete-row:hover { color: #ef4444; }
+
+        .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
     </style>
 </head>
 <body class="bg-slate-900 overflow-hidden">
 
     <div class="main-container">
         <aside class="sidebar">
-            <div class="p-2 text-white text-xs font-bold border-b border-slate-700 flex justify-between items-center">
-                <span>JOB PALETTE</span>
-                <span class="md:hidden text-[10px] opacity-50">タップで展開</span>
+            <div class="md:hidden p-2 text-white text-[10px] font-bold border-b border-slate-700 flex justify-center items-center bg-slate-800">
+                <span class="opacity-50">TAP TO OPEN PALETTE</span>
             </div>
-            <div id="jobPaletteSection" class="overflow-y-auto flex-grow custom-scroll" style="max-height: 40vh; md:max-height: none;">
-                </div>
-            <div class="hidden md:block text-[10px] color-[#64748b] p-2 text-center border-t border-slate-800 text-slate-500">
-                © SQUARE ENIX
-            </div>
+            <div id="jobPaletteSection" class="custom-scroll"></div>
+            <div class="hidden md:block text-[10px] p-2 text-center border-t border-slate-800 text-slate-500">© SQUARE ENIX</div>
         </aside>
 
         <main class="flex-grow flex flex-col bg-white overflow-hidden">
-            <div class="p-2 border-b bg-slate-50 flex flex-wrap gap-2 items-center">
-                <input id="bossName" type="text" class="border px-2 py-1 text-sm rounded w-full md:w-40" placeholder="コンテンツ名">
-                <div class="flex gap-1 flex-wrap">
-                    <button onclick="saveData()" class="bg-emerald-600 text-white px-3 py-1.5 rounded text-xs font-bold">保存</button>
-                    <select id="saveList" class="border text-xs p-1 rounded max-w-[100px]"></select>
-                    <button onclick="loadData()" class="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-bold">読込</button>
-                    <button onclick="clearCurrentTable(true)" class="bg-slate-500 text-white px-3 py-1.5 rounded text-xs font-bold">新規</button>
+            <div class="p-2 border-b bg-slate-50 flex flex-col md:flex-row gap-2 items-start md:items-center shadow-sm z-10">
+                <div class="flex gap-2 w-full md:w-auto">
+                    <input id="bossName" type="text" class="border px-2 py-1.5 text-sm rounded flex-grow md:w-48 font-bold border-slate-300 outline-blue-500" placeholder="コンテンツ名">
+                    <button onclick="saveData()" class="bg-emerald-600 text-white px-3 py-1.5 rounded text-xs font-bold shadow-sm hover:bg-emerald-700">保存</button>
+                </div>
+                <div class="flex gap-1 items-center w-full md:w-auto">
+                    <select id="saveList" class="border text-xs p-1.5 rounded flex-grow md:w-32 outline-none border-slate-300 bg-white"></select>
+                    <button onclick="loadData()" class="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-blue-700">読込</button>
+                    <button onclick="deleteData()" class="bg-red-600 text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-red-700">消去</button>
+                    <button onclick="clearCurrentTable(true)" class="bg-cyan-600 text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-cyan-700">新規</button>
                 </div>
             </div>
 
@@ -99,10 +159,10 @@
                     <thead class="sticky top-0 z-20 bg-slate-800 text-white text-[11px]">
                         <tr>
                             <th class="col-drag"></th>
-                            <th class="col-timeline p-2">タイムライン</th>
-                            <th class="col-buff p-2">バフ／軽減</th>
-                            <th class="col-memo p-2">メモ</th>
-                            <th class="col-mark p-2">印</th>
+                            <th class="col-timeline p-2 text-left">タイムライン</th>
+                            <th class="col-buff p-2 text-left">バフ／軽減</th>
+                            <th class="col-memo p-2 text-left">メモ</th>
+                            <th class="col-mark p-2">ハイライト</th>
                             <th class="col-delete"></th>
                         </tr>
                     </thead>
