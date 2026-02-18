@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FF14 カンペエディタ Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .icon-btn:hover { transform: scale(1.1); filter: brightness(1.2); }
+        .buff-icon { width: 36px; height: 36px; cursor: pointer; transition: transform 0.1s; }
+        .buff-icon:hover { transform: scale(1.1); opacity: 0.7; }
+        .selected-row { background-color: #eff6ff; border-left: 4px solid #3b82f6; }
+        input::placeholder { color: #cbd5e1; font-size: 0.8rem; }
+        /* スクロールバーの調整 */
+        .custom-scroll::-webkit-scrollbar { height: 8px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+    </style>
+</head>
+<body class="bg-slate-100 p-4 md:p-8 pb-48">
+
+    <div class="max-w-6xl mx-auto bg-white p-6 rounded-xl shadow-2xl">
+        <div class="flex flex-wrap items-center justify-between gap-4 mb-6 border-b pb-4">
+            <div class="flex items-center gap-4">
+                <h1 class="text-2xl font-black text-slate-800 tracking-tighter">FF14 KANPE</h1>
+                <div class="flex items-center bg-slate-100 p-1 rounded-lg border">
+                    <input id="bossName" type="text" class="bg-transparent px-3 py-1 outline-none w-40 text-sm" placeholder="ボス名入力...">
+                    <button onclick="saveData()" class="bg-emerald-600 text-white px-4 py-1 rounded-md hover:bg-emerald-700 font-bold text-sm transition">💾 保存</button>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <select id="saveList" class="p-2 border rounded-md bg-white text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">-- 保存データ選択 --</option>
+                </select>
+                <button onclick="loadData()" class="bg-blue-600 text-white px-4 py-1 rounded-md hover:bg-blue-700 font-bold text-sm">📂 読込</button>
+                <button onclick="clearCurrentTable(true)" class="bg-slate-500 text-white px-4 py-1 rounded-md hover:bg-slate-600 font-bold text-sm">🆕 新規</button>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full border-separate border-spacing-y-1">
+                <thead>
+                    <tr class="text-slate-500 text-sm">
+                        <th class="p-2 w-1/4 text-left font-medium">敵の技名</th>
+                        <th class="p-2 text-left font-medium">バフ・アクション</th>
+                        <th class="p-2 w-1/4 text-left font-medium">備考</th>
+                        <th class="p-2 w-12"></th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    </tbody>
+            </table>
+        </div>
+
+        <button onclick="addRow()" class="mt-6 w-full py-3 border-2 border-dashed border-slate-300 rounded-lg text-slate-500 hover:bg-slate-50 hover:border-blue-400 hover:text-blue-500 transition-all font-bold">
+            ＋ 行を追加する
+        </button>
+    </div>
+
+    <div class="fixed bottom-0 left-0 right-0 bg-slate-900 shadow-[0_-4px_20px_rgba(0,0,0,0.3)] p-4">
+        <div class="max-w-6xl mx-auto">
+            <div class="flex gap-2 mb-3 overflow-x-auto custom-scroll pb-2">
+                <button onclick="showJob('TANK')" class="whitespace-nowrap bg-blue-800 text-blue-100 px-4 py-1 rounded-full text-xs font-bold hover:bg-blue-700 transition">タンク共通</button>
+                <button onclick="showJob('PLD')" class="whitespace-nowrap bg-blue-700 text-blue-100 px-4 py-1 rounded-full text-xs font-bold hover:bg-blue-600 transition">ナイト</button>
+                <button onclick="showJob('WAR')" class="whitespace-nowrap bg-red-900 text-red-100 px-4 py-1 rounded-full text-xs font-bold hover:bg-red-800 transition">戦士</button>
+                <button onclick="showJob('HEALER')" class="whitespace-nowrap bg-green-800 text-green-100 px-4 py-1 rounded-full text-xs font-bold hover:bg-green-700 transition">ヒーラー</button>
+                <button onclick="showJob('DPS')" class="whitespace-nowrap bg-red-800 text-red-100 px-4 py-1 rounded-full text-xs font-bold hover:bg-red-700 transition">DPS共通</button>
+            </div>
+            
+            <div id="iconPalette" class="flex flex-wrap gap-3 items-center min-h-[48px]">
+                </div>
+            <p class="text-[10px] text-slate-500 mt-2 italic">※行を選択してからアイコンをクリックして追加。アイコンクリックで削除。</p>
+        </div>
+    </div>
+
+    <script>
+        // --- 設定：画像ファイル名を自分のiconsフォルダの中身に合わせて書き換えてください ---
+        const JOB_DATA = {
+            TANK: [
+                { name: 'リプライザル', file: 'reprisal.png' },
+                { name: 'ランパート', file: 'rampart.png' },
+                { name: 'アームズレングス', file: 'armslength.png' },
+                { name: '挑発', file: 'shirk.png' }
+            ],
+            PLD: [
+                { name: 'センチネル', file: 'sentinel.png' },
+                { name: 'ホーリーシェルトロン', file: 'sheltron.png' },
+                { name: 'ディヴァインヴェール', file: 'veil.png' },
+                { name: 'パッセージ・オブ・アームズ', file: 'passage.png' }
+            ],
+            WAR: [
+                { name: 'ヴェンジェンス', file: 'vengeance.png' },
+                { name: '原初の直感', file: 'raw_intuition.png' },
+                { name: 'シェイクオフ', file: 'shakeoff.png' },
+                { name: 'ホルムギャング', file: 'holm.png' }
+            ],
+            HEALER: [
+                { name: '堅実魔', file: 'surecast.png' },
+                { name: 'ルーシッドドリーム', file: 'lucid.png' },
+                { name: '迅速魔', file: 'swiftcast.png' }
+            ],
+            DPS: [
+                { name: '牽制', file: 'feint.png' },
+                { name: 'アドル', file: 'addle.png' },
+                { name: '内丹', file: 'second_wind.png' }
+            ]
+        };
+
+        let currentRowId = null;
+
+        // 初期化
+        window.onload = () => {
+            updateSaveList();
+            showJob('TANK');
+            addRow(); 
+        };
+
+        // 行を追加
+        function addRow(enemySkill = '', buffs = [], memo = '') {
+            const tbody = document.getElementById('tableBody');
+            const rowId = 'row-' + Date.now() + Math.random().toString(36).substr(2, 5);
+            const tr = document.createElement('tr');
+            tr.className = "group border border-transparent hover:border-blue-200 transition-all rounded-lg";
+            tr.id = rowId;
+            tr.onclick = () => selectRow(rowId);
+
+            tr.innerHTML = `
+                <td class="p-2"><input type="text" class="w-full p-2 bg-slate-50 border border-slate-200 rounded text-sm text-enemy outline-none focus:bg-white focus:ring-2 focus:ring-blue-400" value="${enemySkill}" placeholder="技名..."></td>
+                <td class="p-2"><div class="flex flex-wrap gap-1.5 buff-container min-h-[40px] items-center p-1 bg-slate-50 rounded-md border border-slate-100"></div></td>
+                <td class="p-2"><input type="text" class="w-full p-2 bg-slate-50 border border-slate-200 rounded text-sm text-memo outline-none focus:bg-white focus:ring-2 focus:ring-blue-400" value="${memo}" placeholder="備考..."></td>
+                <td class="p-2 text-center">
+                    <button onclick="document.getElementById('${rowId}').remove()" class="text-slate-300 hover:text-red-500 transition">✕</button>
+                </td>
+            `;
+            
+            tbody.appendChild(tr);
+            
+            const container = tr.querySelector('.buff-container');
+            buffs.forEach(fileName => addIconElement(container, fileName));
+
+            selectRow(rowId);
+        }
+
+        // 行の選択
+        function selectRow(id) {
+            currentRowId = id;
+            document.querySelectorAll('#tableBody tr').forEach(r => r.classList.remove('selected-row'));
+            const selected = document.getElementById(id);
+            if (selected) selected.classList.add('selected-row');
+        }
+
+        // パレット表示
+        function showJob(jobKey) {
+            const palette = document.getElementById('iconPalette');
+            palette.innerHTML = '';
+            
+            JOB_DATA[jobKey].forEach(icon => {
+                const img = document.createElement('img');
+                img.src = `icons/${icon.file}`;
+                img.className = "icon-btn w-10 h-10 cursor-pointer rounded-lg bg-slate-800 p-1 shadow-lg border border-slate-700";
+                img.title = icon.name;
+                img.onclick = () => addIconToCurrentRow(icon.file);
+                palette.appendChild(img);
+            });
+        }
+
+        function addIconToCurrentRow(fileName) {
+            if (!currentRowId) { alert("行を選択してください"); return; }
+            const container = document.querySelector(`#${currentRowId} .buff-container`);
+            addIconElement(container, fileName);
+        }
+
+        function addIconElement(container, fileName) {
+            const img = document.createElement('img');
+            img.src = `icons/${fileName}`;
+            img.className = "buff-icon rounded shadow-sm";
+            img.onclick = (e) => { e.stopPropagation(); img.remove(); };
+            container.appendChild(img);
+        }
+
+        // 保存・読込
+        function saveData() {
+            const bossName = document.getElementById('bossName').value.trim();
+            if (!bossName) { alert("ボス名を入力してください"); return; }
+
+            const data = [];
+            document.querySelectorAll('#tableBody tr').forEach(tr => {
+                const enemySkill = tr.querySelector('.text-enemy').value;
+                const memo = tr.querySelector('.text-memo').value;
+                const buffs = [];
+                tr.querySelectorAll('.buff-container img').forEach(img => {
+                    buffs.push(img.src.split('/').pop());
+                });
+                data.push({ enemySkill, buffs, memo });
+            });
+
+            localStorage.setItem(`ff14_kanpe_${bossName}`, JSON.stringify(data));
+            updateSaveList();
+            alert(`「${bossName}」を保存しました`);
+        }
+
+        function loadData() {
+            const bossName = document.getElementById('saveList').value;
+            if (!bossName) return;
+
+            const saved = localStorage.getItem(`ff14_kanpe_${bossName}`);
+            if (saved) {
+                clearCurrentTable(false);
+                JSON.parse(saved).forEach(row => addRow(row.enemySkill, row.buffs, row.memo));
+                document.getElementById('bossName').value = bossName;
+            }
+        }
+
+        function updateSaveList() {
+            const select = document.getElementById('saveList');
+            select.innerHTML = '<option value="">-- 保存データ選択 --</option>';
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key.startsWith('ff14_kanpe_')) {
+                    const name = key.replace('ff14_kanpe_', '');
+                    const opt = new Option(name, name);
+                    select.add(opt);
+                }
+            }
+        }
+
+        function clearCurrentTable(isNew) {
+            document.getElementById('tableBody').innerHTML = '';
+            if (isNew) {
+                document.getElementById('bossName').value = '';
+                addRow();
+            }
+        }
+    </script>
+</body>
+</html>
