@@ -3,6 +3,7 @@ const allImages = import.meta.glob('./icons/**/*.png', { eager: true, query: '?u
 const JOB_DATA = {};
 let currentRowId = null;
 
+// 画像データの読み込み
 for (const path in allImages) {
     const parts = path.split('/'); 
     const jobName = parts[parts.length - 2]; 
@@ -12,6 +13,7 @@ for (const path in allImages) {
     JOB_DATA[jobName].push({ name: fileName, file: imageUrl });
 }
 
+// 行の追加
 window.addRow = function(enemySkill = '', buffs = [], memo = '', status = 'none') {
     const tbody = document.getElementById('tableBody');
     const rowId = 'row-' + Date.now() + Math.random().toString(36).substr(2, 5);
@@ -24,7 +26,11 @@ window.addRow = function(enemySkill = '', buffs = [], memo = '', status = 'none'
     tr.className = `border-b border-slate-200 draggable-row ${bgClass}`;
     tr.id = rowId;
     tr.draggable = true;
-    tr.onclick = () => selectRow(rowId);
+    
+    // クリックで行を選択（input以外をクリックした時）
+    tr.addEventListener('click', (e) => {
+        selectRow(rowId);
+    });
 
     tr.innerHTML = `
         <td class="text-center drag-handle font-bold text-slate-300 col-drag">⠿</td>
@@ -33,16 +39,20 @@ window.addRow = function(enemySkill = '', buffs = [], memo = '', status = 'none'
         <td class="p-0 col-memo"><input type="text" class="compact-input text-memo outline-none px-2" value="${memo}"></td>
         <td class="p-0 col-mark">
             <div class="flex items-center justify-center gap-1 w-full h-full">
-                <button onclick="toggleRowStatus('${rowId}', 'important')" class="mark-btn text-lg btn-star">${status === 'important' ? '⭐' : '☆'}</button>
-                <button onclick="toggleRowStatus('${rowId}', 'caution')" class="mark-btn text-lg btn-circle">${status === 'caution' ? '🔴' : '⚪'}</button>
+                <button onclick="toggleRowStatus('${rowId}', 'important'); event.stopPropagation();" class="mark-btn text-lg btn-star">${status === 'important' ? '⭐' : '☆'}</button>
+                <button onclick="toggleRowStatus('${rowId}', 'caution'); event.stopPropagation();" class="mark-btn text-lg btn-circle">${status === 'caution' ? '🔴' : '⚪'}</button>
             </div>
         </td>
-        <td class="text-center col-delete"><button onclick="document.getElementById('${rowId}').remove()" class="text-slate-300 hover:text-red-500 text-xs px-2">✕</button></td>
+        <td class="text-center col-delete"><button onclick="document.getElementById('${rowId}').remove(); event.stopPropagation();" class="text-slate-300 hover:text-red-500 text-xs px-2">✕</button></td>
     `;
     
     tbody.appendChild(tr);
     const container = tr.querySelector('.buff-container');
-    buffs.forEach(fileUrl => addIconElement(container, fileUrl));
+    if (buffs && buffs.length > 0) {
+        buffs.forEach(fileUrl => addIconElement(container, fileUrl));
+    }
+    
+    // 追加した行を自動選択
     selectRow(rowId);
 }
 
@@ -94,6 +104,7 @@ function setupJobPalette() {
             img.className = "icon-btn";
             img.title = icon.name;
             img.onclick = (e) => { 
+                e.preventDefault();
                 e.stopPropagation(); 
                 addIconToCurrentRow(icon.file); 
             };
@@ -110,12 +121,20 @@ function selectRow(id) {
     currentRowId = id;
     document.querySelectorAll('#tableBody tr').forEach(r => r.classList.remove('selected-row'));
     const selected = document.getElementById(id);
-    if (selected) selected.classList.add('selected-row');
+    if (selected) {
+        selected.classList.add('selected-row');
+    }
 }
 
 function addIconToCurrentRow(fileUrl) {
-    if (!currentRowId) return;
-    addIconElement(document.querySelector(`#${currentRowId} .buff-container`), fileUrl);
+    if (!currentRowId) {
+        // 行がない場合は1行目を作成して追加
+        window.addRow();
+    }
+    const container = document.querySelector(`#${currentRowId} .buff-container`);
+    if (container) {
+        addIconElement(container, fileUrl);
+    }
 }
 
 function addIconElement(container, fileUrl) {
@@ -123,7 +142,10 @@ function addIconElement(container, fileUrl) {
     img.src = fileUrl;
     img.dataset.rawSrc = fileUrl;
     img.className = "buff-icon";
-    img.onclick = (e) => { e.stopPropagation(); img.remove(); };
+    img.onclick = (e) => { 
+        e.stopPropagation(); 
+        img.remove(); 
+    };
     container.appendChild(img);
 }
 
@@ -197,9 +219,10 @@ window.clearCurrentTable = function(isNew) {
     }
 }
 
+// 起動時の初期化
 document.addEventListener('DOMContentLoaded', () => {
-    updateSaveList();
     setupJobPalette();
-    window.addRow();
+    updateSaveList();
+    window.clearCurrentTable(true);
     initDragAndDrop();
 });
